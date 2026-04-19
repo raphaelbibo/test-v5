@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CineVerse</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
-<!-- Supabase SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
 <style>
 :root{
   --bg:#050d1a;--bg2:#07111f;--bg3:#0a1628;--surface:rgba(255,255,255,.04);--surface2:rgba(255,255,255,.07);
@@ -1762,27 +1761,6 @@ async function loadSocialFeed(){
     </div>`;
   }).join('');
 }
-
-async function loadAllUsers(){
-  $('usersResults').innerHTML='<div class="loading"><div class="spinner"></div>Chargement...</div>';
-  if(!supabaseReady){
-    $('usersResults').innerHTML='<div class="empty">💡 Connecte-toi avec Supabase pour découvrir d\'autres utilisateurs</div>';
-    return;
-  }
-  try{
-    const {data}=await supabase.from('profiles').select('id,username,bio').neq('id',currentUser?.id||'').limit(20);
-    if(!data||!data.length){$('usersResults').innerHTML='<div class="empty">Aucun autre utilisateur pour le moment</div>';return}
-    $('usersResults').innerHTML=`<div class="social-grid">${data.map(u=>userCard(u)).join('')}</div>`;
-  }catch(e){$('usersResults').innerHTML='<div class="empty">Erreur de chargement</div>'}
-}
-
-async function searchUsers(q){
-  if(q.length<2){loadAllUsers();return}
-  if(!supabaseReady)return;
-  const {data}=await supabase.from('profiles').select('id,username,bio').ilike('username',`%${q}%`).neq('id',currentUser?.id||'').limit(10);
-  $('usersResults').innerHTML=data?.length?`<div class="social-grid">${data.map(u=>userCard(u)).join('')}</div>`:'<div class="empty">Aucun utilisateur trouvé</div>';
-}
-
 function userCard(u){
   const isFollowing=following.includes(u.id);
   const initial=(u.username||'?').slice(0,2).toUpperCase();
@@ -1796,50 +1774,6 @@ function userCard(u){
   </div>`;
 }
 
-async function toggleFollow(userId,btn){
-  const idx=following.indexOf(userId);
-  if(idx<0){
-    following.push(userId);btn.textContent='✓ Suivi';btn.classList.add('following');toast('Abonné !');
-  } else {
-    following.splice(idx,1);btn.textContent='+ Suivre';btn.classList.remove('following');toast('Désabonné');
-  }
-  localStorage.setItem('cv_following',JSON.stringify(following));
-  updateSideStats();
-  if(supabaseReady&&currentUser?.supabase){
-    if(idx<0){
-      await supabase.from('follows').upsert({follower_id:currentUser.id,following_id:userId},{onConflict:'follower_id,following_id'}).catch(()=>{});
-    } else {
-      await supabase.from('follows').delete().match({follower_id:currentUser.id,following_id:userId}).catch(()=>{});
-    }
-  }
-}
-
-async function loadFollowing(){
-  $('followingList').innerHTML='<div class="loading"><div class="spinner"></div>Chargement...</div>';
-  if(!following.length){$('followingList').innerHTML='<div class="empty">Tu ne suis personne encore. Va dans "Trouver des gens" !</div>';return}
-  if(!supabaseReady){$('followingList').innerHTML='<div class="empty">Mode local – abonnements sauvegardés localement</div>';return}
-  try{
-    const {data}=await supabase.from('profiles').select('id,username,bio').in('id',following);
-    $('followingList').innerHTML=data?.length?`<div class="social-grid">${data.map(u=>userCard(u)).join('')}</div>`:'<div class="empty">Aucun abonnement trouvé</div>';
-  }catch{$('followingList').innerHTML='<div class="empty">Erreur</div>'}
-}
-
-// ============================================================
-// ACCOUNT
-// ============================================================
-async function saveAccount(){
-  if(!currentUser)return;
-  const n=$('accName').value.trim()||currentUser.username;
-  const e=$('accEmail').value.trim()||currentUser.email;
-  const bio=($('accBio')?.value||'').trim();
-  currentUser.username=n;currentUser.email=e;currentUser.bio=bio;
-  localStorage.setItem('cv_current',JSON.stringify(currentUser));
-  if(supabaseReady&&currentUser?.supabase){
-    await supabase.from('profiles').upsert({id:currentUser.id,username:n,email:e,bio}).catch(()=>{});
-  }
-  renderSidebar();
-  toast('Profil mis à jour ✓');
-}
 function clearFavorites(){if(confirm('Supprimer tous les favoris ?')){favorites=[];saveAll();renderFavorites();toast('Favoris supprimés')}}
 function clearWatched(){if(confirm('Supprimer tout l\'historique ?')){watched=[];saveAll();renderWatched();toast('Historique supprimé')}}
 
@@ -2185,25 +2119,6 @@ function backToGamesMenu(){
 // ============================================================
 function toggleSidebar(){$('sidebar').classList.toggle('open');$('overlay').classList.toggle('show')}
 function closeSidebar(){$('sidebar').classList.remove('open');$('overlay').classList.remove('show')}
-
-// ============================================================
-// BOOT
-// ============================================================
-async function boot(){
-  $('dbStatus').textContent='Connexion à Supabase...';
-  await initSupabase();
-  // Check localStorage session as fallback
-  if(!currentUser){
-    const saved=localStorage.getItem('cv_current');
-    if(saved){
-      try{
-        const u=JSON.parse(saved);
-        if(u&&u.username){loginSuccessLocal(u);return}
-      }catch{}
-    }
-  }
-}
-boot();
 </script>
 </body>
 </html>
