@@ -930,7 +930,7 @@ const esc=s=>String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&
 // ============================================================
 async function initSupabase(){
   try{
-    supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    supabase=window.supabase.createClient(https://etppwwnveoroaladwxxj.supabase.co,sb_publishable_swwApRj5nxVueO5Agjc9Zg_KHQjIdUx);
     // Test connection
     const {error}=await supabase.from('profiles').select('id').limit(1);
     if(!error){
